@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Settings - Harbor Cellars</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+      display: flex;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* --- Sidebar --- */
+    .sidebar {
+      width: 220px;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      padding: 30px 20px;
+      gap: 30px;
+      transition: background 0.3s;
+    }
+    .sidebar h2 { color: #f39c12; font-size: 1.5rem; margin-bottom: 20px; }
+    .sidebar ul { list-style: none; display: flex; flex-direction: column; gap: 15px; }
+    .sidebar ul li a {
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: transform 0.3s, background 0.3s;
+      display: block;
+      color: #fff;
+    }
+    .sidebar ul li a:hover { background: #f39c12; color: #000; transform: scale(1.05); }
+    .sidebar ul li a.active { background: #f39c12; color: #000; }
+
+    /* --- Main Content --- */
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      overflow-y: auto;
+    }
+
+    .main-content h1 { font-size: 2rem; color: #f39c12; margin-bottom: 10px; }
+
+    /* --- Settings Section --- */
+    .setting-section {
+      background: #111;
+      padding: 25px 30px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border: 1px solid #222;
+      transition: background 0.3s;
+    }
+
+    .setting-section h2 {
+      color: #f39c12;
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #222;
+      padding-bottom: 10px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+    }
+
+    .setting-item label {
+      font-size: 1rem;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .setting-item label small {
+      color: #999;
+      font-weight: 400;
+      font-size: 0.85rem;
+    }
+
+    /* --- Toggle Switch --- */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 28px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0;
+      right: 0; bottom: 0;
+      background-color: #444;
+      transition: 0.4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px; width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #fff;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #f39c12;
+    }
+    input:checked + .slider:before {
+      transform: translateX(32px);
+    }
+
+    /* --- Input Fields --- */
+    input[type="password"],
+    input[type="email"],
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 1rem;
+      transition: border 0.3s;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: #f39c12;
+    }
+
+    /* --- Buttons --- */
+    .btn {
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      background: #f39c12;
+      color: #000;
+      transition: transform 0.3s, background 0.3s;
+      width: 100%;
+      max-width: 200px;
+      font-size: 1rem;
+    }
+    .btn:hover { 
+      transform: scale(1.05); 
+      background: #e08e0b;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* --- Alert Messages --- */
+    .alert {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+    .alert.success {
+      background: rgba(46, 204, 113, 0.2);
+      border: 1px solid #2ecc71;
+      color: #2ecc71;
+    }
+    .alert.error {
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid #e74c3c;
+      color: #e74c3c;
+    }
+    .alert.show {
+      display: block;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Password strength indicator */
+    .password-strength {
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+    .password-strength-bar {
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s, background 0.3s;
+    }
+    .password-strength-bar.weak { background: #e74c3c; width: 33%; }
+    .password-strength-bar.medium { background: #f39c12; width: 66%; }
+    .password-strength-bar.strong { background: #2ecc71; width: 100%; }
+
+    /* Light theme styles */
+    body.light-theme {
+      background: #f5f5f5;
+      color: #111;
+    }
+    body.light-theme .sidebar {
+      background: #fff;
+      border-right: 1px solid #ddd;
+    }
+    body.light-theme .sidebar ul li a {
+      color: #111;
+    }
+    body.light-theme .setting-section {
+      background: #fff;
+      border: 1px solid #ddd;
+    }
+    body.light-theme input[type="password"],
+    body.light-theme input[type="email"],
+    body.light-theme input[type="text"],
+    body.light-theme select {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      color: #111;
+    }
+    body.light-theme .setting-section h2 {
+      border-bottom-color: #ddd;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar { 
+        width: 100%; 
+        flex-direction: row; 
+        overflow-x: auto; 
+        padding: 20px; 
+        gap: 15px; 
+      }
+      .sidebar ul { flex-direction: row; gap: 15px; }
+      .main-content { padding: 20px; }
+      .btn { max-width: 100%; }
+      .setting-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <ul>
+      <li><a href="dashboard">Dashboard</a></li>
+      <li><a href="products">Products</a></li>
+      <li><a href="orders">Orders</a></li>
+      <li><a href="users">Users</a></li>
+      <li><a href="settings" class="active">Settings</a></li>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <h1>Settings</h1>
+    <p style="color: #999; margin-top: -20px;">Manage your account preferences and settings</p>
+
+    <!-- Alert Messages -->
+    <div id="alertContainer"></div>
+
+    <!-- Theme Section -->
+    <div class="setting-section">
+      <h2>Theme Preferences</h2>
+      <div class="setting-item">
+        <label for="themeToggle">
+          Dark Mode
+          <small>Switch between light and dark themes</small>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="themeToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="setting-section">
+      <h2>Notifications</h2>
+      <div class="setting-item">
+        <label for="emailNotify">
+          Email Notifications
+          <small>Receive updates via email</small>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="emailNotify" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <label for="smsNotify">
+          SMS Notifications
+          <small>Receive updates via text message</small>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="smsNotify">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <label for="pushNotify">
+          Push Notifications
+          <small>Receive browser push notifications</small>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="pushNotify" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Account Section -->
+    <div class="setting-section">
+      <h2>Account Information</h2>
+      <label for="accountEmail">Email Address</label>
+      <input type="email" id="accountEmail" value="admin@harborcellars.com" placeholder="Email Address">
+      
+      <label for="accountName">Full Name</label>
+      <input type="text" id="accountName" value="Admin User" placeholder="Full Name">
+      
+      <button class="btn" id="updateAccountBtn">Update Account</button>
+    </div>
+
+    <!-- Password Section -->
+    <div class="setting-section">
+      <h2>Change Password</h2>
+      <label for="currentPassword">Current Password</label>
+      <input type="password" id="currentPassword" placeholder="Enter current password">
+      
+      <label for="newPassword">New Password</label>
+      <input type="password" id="newPassword" placeholder="Enter new password">
+      <div class="password-strength">
+        <div class="password-strength-bar" id="strengthBar"></div>
+      </div>
+      <small style="color: #999; margin-top: 5px;" id="strengthText">Password strength: None</small>
+      
+      <label for="confirmPassword">Confirm New Password</label>
+      <input type="password" id="confirmPassword" placeholder="Confirm new password">
+      
+      <button class="btn" id="updatePasswordBtn">Update Password</button>
+    </div>
+
+    <!-- Language Section -->
+    <div class="setting-section">
+      <h2>Language & Region</h2>
+      <label for="languageSelect">Language</label>
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="my">Myanmar (ဗမာ)</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+      </select>
+      
+      <label for="timezoneSelect">Timezone</label>
+      <select id="timezoneSelect">
+        <option value="UTC+6:30">Myanmar (UTC+6:30)</option>
+        <option value="UTC-8">Pacific Time (UTC-8)</option>
+        <option value="UTC-5">Eastern Time (UTC-5)</option>
+        <option value="UTC+0">GMT (UTC+0)</option>
+      </select>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      // Show alert function
+      function showAlert(message, type) {
+        const container = document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert ${type} show`;
+        alert.textContent = message;
+        container.innerHTML = '';
+        container.appendChild(alert);
+        
+        setTimeout(() => {
+          alert.classList.remove('show');
+          setTimeout(() => container.removeChild(alert), 300);
+        }, 3000);
+      }
+
+      // GSAP animations
+      if (typeof gsap !== 'undefined') {
+        gsap.from(".main-content h1", { 
+          duration: 0.8, 
+          opacity: 0, 
+          y: -30,
+          ease: "power2.out"
+        });
+        gsap.from(".setting-section", { 
+          duration: 0.8, 
+          opacity: 0, 
+          y: 20, 
+          stagger: 0.15,
+          ease: "power2.out"
+        });
+      }
+
+      // Theme Toggle with saved preference
+      const themeToggle = document.getElementById("themeToggle");
+      const body = document.body;
+      
+      // Load saved theme
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      if (savedTheme === 'light') {
+        body.classList.add('light-theme');
+        themeToggle.checked = false;
+      }
+
+      themeToggle.addEventListener("change", function() {
+        if(this.checked) {
+          body.classList.remove('light-theme');
+          localStorage.setItem('theme', 'dark');
+          showAlert('Switched to Dark Mode', 'success');
+        } else {
+          body.classList.add('light-theme');
+          localStorage.setItem('theme', 'light');
+          showAlert('Switched to Light Mode', 'success');
+        }
+      });
+
+      // Load notification preferences
+      const emailNotify = document.getElementById("emailNotify");
+      const smsNotify = document.getElementById("smsNotify");
+      const pushNotify = document.getElementById("pushNotify");
+
+      emailNotify.checked = localStorage.getItem('emailNotify') !== 'false';
+      smsNotify.checked = localStorage.getItem('smsNotify') === 'true';
+      pushNotify.checked = localStorage.getItem('pushNotify') !== 'false';
+
+      // Save notification preferences
+      [emailNotify, smsNotify, pushNotify].forEach(toggle => {
+        toggle.addEventListener('change', function() {
+          localStorage.setItem(this.id, this.checked);
+          showAlert(`${this.parentElement.previousElementSibling.firstChild.textContent.trim()} ${this.checked ? 'enabled' : 'disabled'}`, 'success');
+        });
+      });
+
+      // Password strength checker
+      const newPassword = document.getElementById("newPassword");
+      const strengthBar = document.getElementById("strengthBar");
+      const strengthText = document.getElementById("strengthText");
+
+      function checkPasswordStrength(password) {
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (password.length >= 12) strength++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+        if (/\d/.test(password)) strength++;
+        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+        
+        return strength;
+      }
+
+      newPassword.addEventListener('input', function() {
+        const strength = checkPasswordStrength(this.value);
+        strengthBar.className = 'password-strength-bar';
+        
+        if (this.value.length === 0) {
+          strengthBar.className = 'password-strength-bar';
+          strengthText.textContent = 'Password strength: None';
+        } else if (strength <= 2) {
+          strengthBar.classList.add('weak');
+          strengthText.textContent = 'Password strength: Weak';
+          strengthText.style.color = '#e74c3c';
+        } else if (strength <= 3) {
+          strengthBar.classList.add('medium');
+          strengthText.textContent = 'Password strength: Medium';
+          strengthText.style.color = '#f39c12';
+        } else {
+          strengthBar.classList.add('strong');
+          strengthText.textContent = 'Password strength: Strong';
+          strengthText.style.color = '#2ecc71';
+        }
+      });
+
+      // Update Account
+      const updateAccountBtn = document.getElementById("updateAccountBtn");
+      updateAccountBtn.addEventListener("click", function() {
+        const email = document.getElementById("accountEmail").value;
+        const name = document.getElementById("accountName").value;
+
+        if (!email || !name) {
+          showAlert("Please fill in all fields!", "error");
+          return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showAlert("Please enter a valid email address!", "error");
+          return;
+        }
+
+        showAlert("Account information updated successfully!", "success");
+      });
+
+      // Password Update
+      const updatePasswordBtn = document.getElementById("updatePasswordBtn");
+      updatePasswordBtn.addEventListener("click", function() {
+        const current = document.getElementById("currentPassword").value;
+        const newPass = document.getElementById("newPassword").value;
+        const confirmPass = document.getElementById("confirmPassword").value;
+
+        if(!current || !newPass || !confirmPass) {
+          showAlert("Please fill in all password fields!", "error");
+          return;
+        }
+
+        if(newPass.length < 8) {
+          showAlert("Password must be at least 8 characters long!", "error");
+          return;
+        }
+
+        if(newPass !== confirmPass) {
+          showAlert("New passwords do not match!", "error");
+          return;
+        }
+
+        const strength = checkPasswordStrength(newPass);
+        if(strength <= 2) {
+          showAlert("Please choose a stronger password!", "error");
+          return;
+        }
+
+        showAlert("Password updated successfully!", "success");
+        document.getElementById("currentPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+        strengthBar.className = 'password-strength-bar';
+        strengthText.textContent = 'Password strength: None';
+      });
+
+      // Language and Timezone
+      const languageSelect = document.getElementById("languageSelect");
+      const timezoneSelect = document.getElementById("timezoneSelect");
+
+      languageSelect.value = localStorage.getItem('language') || 'en';
+      timezoneSelect.value = localStorage.getItem('timezone') || 'UTC+6:30';
+
+      languageSelect.addEventListener('change', function() {
+        localStorage.setItem('language', this.value);
+        showAlert(`Language changed to ${this.options[this.selectedIndex].text}`, 'success');
+      });
+
+      timezoneSelect.addEventListener('change', function() {
+        localStorage.setItem('timezone', this.value);
+        showAlert(`Timezone changed to ${this.options[this.selectedIndex].text}`, 'success');
+      });
+    });
+  </script>
+</body>
+</html>

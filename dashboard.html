@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Harbor Cellars</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+      display: flex;
+      min-height: 100vh;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    .sidebar {
+      width: 220px;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      padding: 30px 20px;
+      gap: 30px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    .sidebar h2 {
+      color: #f39c12;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+    .sidebar ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .sidebar ul li a {
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: transform 0.3s, background 0.3s;
+      display: block;
+      color: #fff;
+    }
+    .sidebar ul li a:hover {
+      background: #f39c12;
+      color: #000;
+      transform: scale(1.05);
+    }
+    .sidebar ul li a.active {
+      background: #f39c12;
+      color: #000;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      overflow-y: auto;
+      margin-left: 220px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: -20px;
+    }
+    .dashboard-header h1 {
+      color: #f39c12;
+      font-size: 2rem;
+    }
+    .refresh-btn {
+      padding: 10px 20px;
+      background: #f39c12;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .refresh-btn:hover {
+      transform: scale(1.05);
+    }
+    .refresh-btn.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .refresh-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      animation: spin 1s linear infinite;
+      animation-play-state: paused;
+    }
+    .refresh-btn.loading .refresh-icon {
+      animation-play-state: running;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .last-updated {
+      color: #999;
+      font-size: 0.9rem;
+      margin-top: 5px;
+    }
+
+    .overview-cards {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: #111;
+      flex: 1 1 200px;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      cursor: pointer;
+      perspective: 1000px;
+      transition: transform 0.5s, border-color 0.3s;
+      border: 2px solid transparent;
+      position: relative;
+    }
+    .card:hover { 
+      transform: rotateY(10deg) scale(1.05); 
+      border-color: #f39c12;
+    }
+    .card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      color: #f39c12;
+    }
+    .card p {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    .card .change {
+      font-size: 0.9rem;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .card .change.positive {
+      color: #4CAF50;
+    }
+    .card .change.negative {
+      color: #e74c3c;
+    }
+    .card .trend-arrow {
+      font-size: 1.2rem;
+    }
+    .card.updating {
+      opacity: 0.6;
+    }
+
+    .charts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+    }
+    .chart-container {
+      flex: 1 1 400px;
+      background: #111;
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid #222;
+      position: relative;
+    }
+    .chart-container h3 {
+      color: #f39c12;
+      margin-bottom: 20px;
+    }
+
+    .data-source {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 0.75rem;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    .status-dot.offline {
+      background: #e74c3c;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .activity-section {
+      background: #111;
+      padding: 25px 30px;
+      border-radius: 16px;
+      border: 1px solid #222;
+    }
+    .activity-section h3 {
+      color: #f39c12;
+      margin-bottom: 20px;
+    }
+    .activity-item {
+      padding: 15px;
+      border-bottom: 1px solid #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+    .activity-time {
+      color: #999;
+      font-size: 0.85rem;
+    }
+    .activity-icon {
+      margin-right: 10px;
+      color: #f39c12;
+    }
+
+    .error-message {
+      background: #e74c3c;
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
+    }
+
+    @media (max-width: 1200px) {
+      .sidebar { width: 200px; }
+      .main-content { margin-left: 200px; }
+    }
+
+    @media (max-width: 992px) {
+      body { flex-direction: column; }
+      .sidebar { 
+        width: 100%; 
+        height: auto;
+        flex-direction: row; 
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 15px; 
+        gap: 10px;
+        position: sticky;
+        top: 0;
+        left: 0;
+      }
+      .sidebar h2 { 
+        font-size: 1.2rem; 
+        min-width: max-content;
+      }
+      .sidebar ul { 
+        flex-direction: row; 
+        gap: 10px; 
+        overflow-x: auto;
+        flex-wrap: nowrap;
+      }
+      .sidebar ul li a {
+        white-space: nowrap;
+        padding: 8px 12px;
+      }
+      .main-content { 
+        padding: 25px;
+        margin-left: 0;
+      }
+      .overview-cards { gap: 20px; }
+      .charts { gap: 20px; }
+    }
+
+    @media (max-width: 768px) {
+      .main-content { padding: 20px; }
+      .overview-cards { flex-direction: column; gap: 20px; }
+      .charts { flex-direction: column; gap: 20px; }
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .main-content { padding: 15px 10px; }
+      .dashboard-header h1 { font-size: 1.5rem; }
+      .card { padding: 20px; }
+      .card h3 { font-size: 1rem; }
+      .card p { font-size: 1.6rem; }
+      .chart-container { padding: 20px; }
+      .refresh-btn { padding: 8px 15px; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <ul>
+      <li><a href="dashboard.html" class="active">Dashboard</a></li>
+      <li><a href="products.html">Products</a></li>
+      <li><a href="orders.html">Orders</a></li>
+      <li><a href="users.html">Users</a></li>
+      <li><a href="settings.html">Settings</a></li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <div class="error-message" id="errorMessage"></div>
+
+    <div class="dashboard-header">
+      <div>
+        <h1>Dashboard Overview</h1>
+        <p class="last-updated">Last synced: <span id="lastUpdated">--</span></p>
+      </div>
+      <button class="refresh-btn" id="refreshBtn">
+        <span class="refresh-icon">↻</span>
+        Sync Data
+      </button>
+    </div>
+
+    <div class="overview-cards">
+      <div class="card" data-metric="products">
+        <div class="data-source">
+          <span class="status-dot" id="productsStatus"></span>
+          <span id="productsSource">Loading...</span>
+        </div>
+        <h3>Total Products</h3>
+        <p id="totalProducts">--</p>
+        <div class="change positive" id="productsChange">
+          <span class="trend-arrow">↑</span>
+          <span>Live from API</span>
+        </div>
+      </div>
+      <div class="card" data-metric="orders">
+        <div class="data-source">
+          <span class="status-dot" id="ordersStatus"></span>
+          <span id="ordersSource">Loading...</span>
+        </div>
+        <h3>Total Orders</h3>
+        <p id="totalOrders">--</p>
+        <div class="change positive" id="ordersChange">
+          <span class="trend-arrow">↑</span>
+          <span>Live from API</span>
+        </div>
+      </div>
+      <div class="card" data-metric="users">
+        <div class="data-source">
+          <span class="status-dot" id="usersStatus"></span>
+          <span id="usersSource">Loading...</span>
+        </div>
+        <h3>Total Users</h3>
+        <p id="totalUsers">--</p>
+        <div class="change positive" id="usersChange">
+          <span class="trend-arrow">↑</span>
+          <span>Live from API</span>
+        </div>
+      </div>
+      <div class="card" data-metric="revenue">
+        <div class="data-source">
+          <span class="status-dot" id="revenueStatus"></span>
+          <span id="revenueSource">Calculated</span>
+        </div>
+        <h3>Total Revenue</h3>
+        <p id="totalRevenue">--</p>
+        <div class="change positive" id="revenueChange">
+          <span class="trend-arrow">↑</span>
+          <span>From all orders</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-container">
+        <h3>Sales Overview (Last 6 Months)</h3>
+        <canvas id="salesChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Product Categories Stock</h3>
+        <canvas id="stockChart"></canvas>
+      </div>
+    </div>
+
+    <div class="activity-section">
+      <h3>Recent Activity Feed</h3>
+      <div id="activityList"></div>
+    </div>
+  </div>
+
+  <script>
+    // MockAPI URLs - သင့်ရဲ့ MockAPI project ID ကို အစားထိုးပါ
+    const API_URLS = {
+      products: 'https://68e5c90621dd31f22cc2f478.mockapi.io/v1/products',
+      orders: 'https://68e416768e116898997af68f.mockapi.io/v1/order',
+      users: 'https://68ee8cb5df2025af780412fa.mockapi.io/v1/user'
+    };
+
+    let salesChart, stockChart;
+    let autoRefreshInterval;
+    let broadcastChannel = null;
+    
+    // In-memory cache
+    const dataCache = {
+      products: [],
+      orders: [],
+      users: [],
+      activity: []
+    };
+
+    // Initialize BroadcastChannel for real-time sync
+    if (typeof BroadcastChannel !== 'undefined') {
+      broadcastChannel = new BroadcastChannel('harbor_admin_updates');
+      console.log('✅ Dashboard BroadcastChannel initialized');
+    }
+
+    // Activity logger
+    function logActivity(message, type = 'info') {
+      const newLog = {
+        message: message,
+        type: type,
+        timestamp: new Date().toISOString()
+      };
+      
+      dataCache.activity.unshift(newLog);
+      if (dataCache.activity.length > 50) {
+        dataCache.activity = dataCache.activity.slice(0, 50);
+      }
+      
+      console.log('📋', message, `[${type}]`);
+      updateActivityDisplay();
+      
+      // Broadcast activity to other pages
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({
+          type: 'activity_logged',
+          data: newLog
+        });
+      }
+    }
+
+    // Error display
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.add('show');
+        setTimeout(() => {
+          errorEl.classList.remove('show');
+        }, 5000);
+      }
+    }
+
+    // Listen for real-time updates from other pages
+    if (broadcastChannel) {
+      broadcastChannel.addEventListener('message', (event) => {
+        console.log('📩 Received broadcast:', event.data);
+        
+        if (event.data.type === 'products_updated') {
+          console.log('✅ Products data received:', event.data.data);
+          dataCache.products = event.data.data.products || [];
+          updateStatus('productsStatus', true);
+          updateSource('productsSource', 'Live Sync');
+          updateDashboard(false);
+          logActivity(`Products synced: ${dataCache.products.length} products`, 'sync');
+        }
+        
+        if (event.data.type === 'orders_updated') {
+          console.log('✅ Orders data received:', event.data.data);
+          dataCache.orders = event.data.data.orders || [];
+          updateStatus('ordersStatus', true);
+          updateSource('ordersSource', 'Live Sync');
+          updateDashboard(false);
+          logActivity(`Orders synced: ${dataCache.orders.length} orders`, 'sync');
+        }
+        
+        if (event.data.type === 'users_updated') {
+          console.log('✅ Users data received:', event.data.data);
+          dataCache.users = event.data.data.users || [];
+          updateStatus('usersStatus', true);
+          updateSource('usersSource', 'Live Sync');
+          updateDashboard(false);
+          logActivity(`Users synced: ${dataCache.users.length} users`, 'sync');
+        }
+        
+        if (event.data.type === 'activity_logged') {
+          console.log('📝 Activity received:', event.data.data);
+          dataCache.activity.unshift(event.data.data);
+          if (dataCache.activity.length > 50) {
+            dataCache.activity = dataCache.activity.slice(0, 50);
+          }
+          updateActivityDisplay();
+        }
+      });
+    }
+
+    // Fetch real data from MockAPI
+    async function fetchRealData() {
+      const results = {
+        products: [],
+        orders: [],
+        users: [],
+        errors: {}
+      };
+
+      // Fetch Products
+      try {
+        const productsRes = await fetch(API_URLS.products);
+        if (productsRes.ok) {
+          results.products = await productsRes.json();
+          dataCache.products = results.products;
+          updateStatus('productsStatus', true);
+          updateSource('productsSource', 'Live API');
+          console.log('✅ Products fetched:', results.products.length);
+          
+          // Broadcast to other pages
+          if (broadcastChannel) {
+            broadcastChannel.postMessage({
+              type: 'products_updated',
+              data: { products: results.products }
+            });
+          }
+        } else {
+          throw new Error(`API returned ${productsRes.status}`);
+        }
+      } catch (error) {
+        console.error('❌ Products fetch error:', error);
+        results.errors.products = error.message;
+        updateStatus('productsStatus', false);
+        updateSource('productsSource', 'Offline');
+        
+        // Use cached data if available
+        if (dataCache.products.length > 0) {
+          results.products = dataCache.products;
+          updateStatus('productsStatus', true);
+          updateSource('productsSource', 'Cached');
+        }
+      }
+
+      // Fetch Orders
+      try {
+        const ordersRes = await fetch(API_URLS.orders);
+        if (ordersRes.ok) {
+          results.orders = await ordersRes.json();
+          dataCache.orders = results.orders;
+          updateStatus('ordersStatus', true);
+          updateSource('ordersSource', 'Live API');
+          console.log('✅ Orders fetched:', results.orders.length);
+          
+          // Broadcast to other pages
+          if (broadcastChannel) {
+            broadcastChannel.postMessage({
+              type: 'orders_updated',
+              data: { orders: results.orders }
+            });
+          }
+        } else {
+          throw new Error(`API returned ${ordersRes.status}`);
+        }
+      } catch (error) {
+        console.error('❌ Orders fetch error:', error);
+        results.errors.orders = error.message;
+        updateStatus('ordersStatus', false);
+        updateSource('ordersSource', 'Offline');
+        
+        // Use cached data if available
+        if (dataCache.orders.length > 0) {
+          results.orders = dataCache.orders;
+          updateStatus('ordersStatus', true);
+          updateSource('ordersSource', 'Cached');
+        }
+      }
+
+      // Fetch Users
+      try {
+        const usersRes = await fetch(API_URLS.users);
+        if (usersRes.ok) {
+          results.users = await usersRes.json();
+          dataCache.users = results.users;
+          updateStatus('usersStatus', true);
+          updateSource('usersSource', 'Live API');
+          console.log('✅ Users fetched:', results.users.length);
+          
+          // Broadcast to other pages
+          if (broadcastChannel) {
+            broadcastChannel.postMessage({
+              type: 'users_updated',
+              data: { users: results.users }
+            });
+          }
+        } else {
+          throw new Error(`API returned ${usersRes.status}`);
+        }
+      } catch (error) {
+        console.error('❌ Users fetch error:', error);
+        results.errors.users = error.message;
+        updateStatus('usersStatus', false);
+        updateSource('usersSource', 'Offline');
+        
+        // Use cached data if available
+        if (dataCache.users.length > 0) {
+          results.users = dataCache.users;
+          updateStatus('usersStatus', true);
+          updateSource('usersSource', 'Cached');
+        }
+      }
+
+      // Show error if all APIs failed
+      const errorCount = Object.keys(results.errors).length;
+      if (errorCount > 0) {
+        const errorMsg = `Failed to fetch data from ${errorCount} API(s). Check console for details.`;
+        showError(errorMsg);
+        logActivity(errorMsg, 'error');
+      }
+
+      return results;
+    }
+
+    // Update status indicators
+    function updateStatus(elementId, isOnline) {
+      const dot = document.getElementById(elementId);
+      if (dot) {
+        if (isOnline) {
+          dot.classList.remove('offline');
+        } else {
+          dot.classList.add('offline');
+        }
+      }
+    }
+
+    function updateSource(elementId, text) {
+      const source = document.getElementById(elementId);
+      if (source) {
+        source.textContent = text;
+      }
+    }
+
+    // Process dashboard data
+    function processDashboardData(data) {
+      const totalProducts = data.products.length;
+      const totalOrders = data.orders.length;
+      const totalUsers = data.users.length;
+      
+      // Calculate total revenue from orders
+      const totalRevenue = data.orders.reduce((sum, order) => {
+        const amount = parseFloat(order.total || order.amount || order.price || 0);
+        return sum + amount;
+      }, 0);
+
+      // Calculate stock by category
+      const stockByCategory = {
+        'Red Wine': 0,
+        'White Wine': 0,
+        'Rosé': 0,
+        'Sparkling': 0,
+        'Other': 0
+      };
+      
+      data.products.forEach(product => {
+        const category = product.category || 'Other';
+        if (stockByCategory[category] !== undefined) {
+          stockByCategory[category] += parseInt(product.stock || 0);
+        } else {
+          stockByCategory['Other'] += parseInt(product.stock || 0);
+        }
+      });
+
+      // Generate sales data for last 6 months from orders
+      const now = new Date();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const salesData = [];
+      const salesLabels = [];
+
+      for (let i = 5; i >= 0; i--) {
+        const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthName = monthNames[targetDate.getMonth()];
+        salesLabels.push(monthName);
+
+        const monthRevenue = data.orders
+          .filter(order => {
+            const orderDate = new Date(order.date || order.createdAt || order.created_at);
+            return orderDate.getMonth() === targetDate.getMonth() && 
+                   orderDate.getFullYear() === targetDate.getFullYear();
+          })
+          .reduce((sum, order) => sum + parseFloat(order.total || order.amount || 0), 0);
+        
+        salesData.push(monthRevenue);
+      }
+
+      // Get recent activity
+      const recentLogs = dataCache.activity.slice(0, 10);
+
+      return {
+        totalProducts,
+        totalOrders,
+        totalUsers,
+        totalRevenue,
+        salesData,
+        salesLabels,
+        stockData: Object.values(stockByCategory).filter(val => val > 0),
+        stockLabels: Object.keys(stockByCategory).filter(key => stockByCategory[key] > 0),
+        recentActivity: recentLogs.map(log => ({
+          text: log.message || log.text || 'Unknown activity',
+          time: formatTimeAgo(new Date(log.timestamp)),
+          type: log.type || 'info'
+        }))
+      };
+    }
+
+    // Format time ago
+    function formatTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      if (seconds < 60) return 'Just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes} min ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ago`;
+    }
+
+    // Animate counter
+    function animateValue(element, start, end, duration, prefix = '', suffix = '') {
+      if (!element) return;
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const value = Math.floor(progress * (end - start) + start);
+        element.textContent = prefix + value.toLocaleString() + suffix;
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
+    // Update activity display
+    function updateActivityDisplay() {
+      const activityList = document.getElementById('activityList');
+      if (!activityList) return;
+
+      const recentLogs = dataCache.activity.slice(0, 10);
+      
+      if (recentLogs.length > 0) {
+        activityList.innerHTML = recentLogs.map(log => {
+          const iconColor = log.type === 'error' ? '#e74c3c' : 
+                           log.type === 'create' ? '#4CAF50' : 
+                           log.type === 'update' ? '#3498db' : 
+                           log.type === 'delete' ? '#e74c3c' : 
+                           log.type === 'sync' ? '#9b59b6' : '#f39c12';
+          return `
+            <div class="activity-item">
+              <span><span class="activity-icon" style="color:${iconColor}">●</span>${log.message || 'Activity'}</span>
+              <span class="activity-time">${formatTimeAgo(new Date(log.timestamp))}</span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        activityList.innerHTML = '<div class="activity-item"><span>No recent activity</span></div>';
+      }
+    }
+
+    // Update dashboard display
+    async function updateDashboard(animate = true) {
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) refreshBtn.classList.add('loading');
+      
+      document.querySelectorAll('.card').forEach(card => card.classList.add('updating'));
+
+      try {
+        // Fetch real data
+        const realData = await fetchRealData();
+        const dashboardData = processDashboardData(realData);
+        
+        // Update cards
+        const totalProductsEl = document.getElementById("totalProducts");
+        const totalOrdersEl = document.getElementById("totalOrders");
+        const totalUsersEl = document.getElementById("totalUsers");
+        const totalRevenueEl = document.getElementById("totalRevenue");
+
+        if (animate) {
+          animateValue(totalProductsEl, 0, dashboardData.totalProducts, 800);
+          animateValue(totalOrdersEl, 0, dashboardData.totalOrders, 800);
+          animateValue(totalUsersEl, 0, dashboardData.totalUsers, 800);
+          animateValue(totalRevenueEl, 0, dashboardData.totalRevenue, 800, '$');
+        } else {
+          if (totalProductsEl) totalProductsEl.textContent = dashboardData.totalProducts.toLocaleString();
+          if (totalOrdersEl) totalOrdersEl.textContent = dashboardData.totalOrders.toLocaleString();
+          if (totalUsersEl) totalUsersEl.textContent = dashboardData.totalUsers.toLocaleString();
+          if (totalRevenueEl) totalRevenueEl.textContent = '$' + dashboardData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Update revenue status
+        updateStatus('revenueStatus', dashboardData.totalOrders > 0);
+
+        // Update charts
+        if (salesChart) {
+          salesChart.data.labels = dashboardData.salesLabels;
+          salesChart.data.datasets[0].data = dashboardData.salesData;
+          salesChart.update('none');
+        }
+        
+        if (stockChart) {
+          stockChart.data.labels = dashboardData.stockLabels;
+          stockChart.data.datasets[0].data = dashboardData.stockData;
+          stockChart.update('none');
+        }
+
+        // Update activity
+        updateActivityDisplay();
+
+        // Update last synced time
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        if (lastUpdatedEl) {
+          lastUpdatedEl.textContent = new Date().toLocaleTimeString();
+        }
+
+        if (animate) {
+          logActivity('Dashboard loaded successfully', 'system');
+        } else {
+          logActivity('Dashboard data refreshed', 'sync');
+        }
+      } catch (error) {
+        console.error('❌ Dashboard update error:', error);
+        logActivity('Dashboard update failed: ' + error.message, 'error');
+        showError('Failed to update dashboard');
+      } finally {
+        if (refreshBtn) refreshBtn.classList.remove('loading');
+        document.querySelectorAll('.card').forEach(card => card.classList.remove('updating'));
+      }
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', async function() {
+      console.log('🚀 Dashboard initializing...');
+      console.log('📡 API Endpoints:', API_URLS);
+      
+      // GSAP animations
+      if (typeof gsap !== 'undefined') {
+        gsap.from(".overview-cards .card", { 
+          duration: 0.8, 
+          opacity: 0, 
+          y: 50, 
+          stagger: 0.15,
+          ease
+          : "power2.out"
+        });
+        gsap.from(".chart-container", { 
+          duration: 0.8, 
+          opacity: 0, 
+          y: 50, 
+          stagger: 0.2,
+          delay: 0.5,
+          ease: "power2.out"
+        });
+        gsap.from(".activity-section", {
+          duration: 0.8,
+          opacity: 0,
+          y: 50,
+          delay: 0.8,
+          ease: "power2.out"
+        });
+      }
+
+      // Initial data fetch
+      const realData = await fetchRealData();
+      const initialData = processDashboardData(realData);
+
+      // Setup Sales Chart
+      const salesCtx = document.getElementById('salesChart');
+      if (salesCtx && typeof Chart !== 'undefined') {
+        salesChart = new Chart(salesCtx, {
+          type: 'line',
+          data: {
+            labels: initialData.salesLabels,
+            datasets: [{
+              label: 'Revenue ($)',
+              data: initialData.salesData,
+              borderColor: '#f39c12',
+              backgroundColor: 'rgba(243, 156, 18, 0.2)',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#f39c12',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { 
+              legend: { labels: { color: '#fff', font: { size: 14 } } },
+              tooltip: {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: 12,
+                titleColor: '#f39c12',
+                bodyColor: '#fff',
+                callbacks: {
+                  label: function(context) {
+                    return 'Revenue: $' + context.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { ticks: { color: '#fff' }, grid: { color: '#333' } },
+              y: { 
+                ticks: { 
+                  color: '#fff',
+                  callback: value => '$' + value.toLocaleString()
+                }, 
+                grid: { color: '#333' } 
+              }
+            },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
+          }
+        });
+      }
+
+      // Setup Stock Chart
+      const stockCtx = document.getElementById('stockChart');
+      if (stockCtx && typeof Chart !== 'undefined') {
+        stockChart = new Chart(stockCtx, {
+          type: 'bar',
+          data: {
+            labels: initialData.stockLabels,
+            datasets: [{
+              label: 'Stock Units',
+              data: initialData.stockData,
+              backgroundColor: ['#f39c12', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6'],
+              borderColor: '#fff',
+              borderWidth: 2,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { 
+              legend: { labels: { color: '#fff', font: { size: 14 } } },
+              tooltip: {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: 12,
+                titleColor: '#f39c12',
+                bodyColor: '#fff'
+              }
+            },
+            scales: {
+              x: { ticks: { color: '#fff' }, grid: { color: '#333', display: false } },
+              y: { 
+                ticks: { color: '#fff', stepSize: 10 }, 
+                grid: { color: '#333' },
+                beginAtZero: true
+              }
+            },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
+          }
+        });
+      }
+
+      // Initial update
+      await updateDashboard(true);
+
+      // Refresh button
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          logActivity('Manual data refresh triggered', 'user');
+          updateDashboard(false);
+        });
+      }
+
+      // Auto-refresh every 30 seconds
+      autoRefreshInterval = setInterval(() => {
+        console.log('⏰ Auto-refresh triggered');
+        updateDashboard(false);
+      }, 30000);
+
+      console.log('✅ Dashboard ready!');
+      console.log('📊 Data sources:', {
+        products: dataCache.products.length,
+        orders: dataCache.orders.length,
+        users: dataCache.users.length
+      });
+    });
+
+    // Cleanup
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      if (broadcastChannel) {
+        broadcastChannel.close();
+        console.log('🔌 BroadcastChannel closed');
+      }
+    });
+
+    // Periodic ping to check connection
+    setInterval(() => {
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'ping', from: 'dashboard' });
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
